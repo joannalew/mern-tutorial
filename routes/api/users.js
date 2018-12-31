@@ -7,8 +7,18 @@ const User = require('../../models/User');
 const jwt = require('jsonwebtoken');
 const keys = require('../../config/keys');
 
-router.get("/test", (req, res) => res.json({ msg: "This is the users route" }));
+const passport = require('passport');
 
+// get current user
+router.get('/current', passport.authenticate('jwt', { session: false }), (req, res) => {
+    res.json({
+        id: req.user.id,
+        handle: req.user.handle,
+        email: req.user.email
+    });
+});
+
+// create new user
 router.post("/register", (req, res) => {
     User.findOne({ email: req.body.email }).then(user => {
         if (user) {
@@ -44,6 +54,7 @@ router.post("/register", (req, res) => {
     });
 });
 
+// login user
 router.post("/login", (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
