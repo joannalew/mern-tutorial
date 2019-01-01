@@ -3,6 +3,8 @@ const router = express.Router();
 
 const bcrypt = require('bcryptjs');
 const User = require('../../models/User');
+const validateRegisterInput = require('../../validation/register');
+const validateLoginInput = require('../../validation/login');
 
 const jwt = require('jsonwebtoken');
 const keys = require('../../config/keys');
@@ -20,13 +22,19 @@ router.get('/current', passport.authenticate('jwt', { session: false }), (req, r
 
 // create new user
 router.post("/register", (req, res) => {
-    User.findOne({ email: req.body.email }).then(user => {
+    const { errors, isValid } = validateRegisterInput(req.body);
+
+    if (!isValid) {
+        return res.status(400).json(errors);
+    }
+
+    User.findOne({ name: req.body.name }).then(user => {
         if (user) {
-            errors.email = "User already exists";
+            errors.name = "User already exists";
             return res.status(400).json(errors);
         } else {
             const newUser = new User({
-                handle: req.body.handle,
+                name: req.body.name,
                 email: req.body.email,
                 password: req.body.password
             });
@@ -38,7 +46,7 @@ router.post("/register", (req, res) => {
                     newUser
                         .save()
                         .then(user => {
-                            const payload = { id: user.id, handle: user.handle };
+                            const payload = { id: user.id, name: user.name };
 
                             jwt.sign(payload, keys.secretOrKey, { expiresIn: 3600 }, (err, token) => {
                                 res.json({
@@ -56,20 +64,26 @@ router.post("/register", (req, res) => {
 
 // login user
 router.post("/login", (req, res) => {
-    const email = req.body.email;
+    const { errors, isValid } = validateLoginInput(req.body);
+
+    if (!isValid) {
+        return res.status(400).json(errors);
+    }
+
+    const name = req.body.name;
     const password = req.body.password;
 
-    User.findOne({ email }).then(user => {
+    User.findOne({ name }).then(user => {
         if (!user) {
-            errors.email = "This user does not exist";
+            errors.name = "This user does not exist";
             return res.status(400).json(errors);
         }
 
         bcrypt.compare(password, user.password).then(isMatch => {
             if (isMatch) {
-                const payload = { id: user.id, handle: user.handle };
+                const payload = { id: user.id, name: user.name };
 
-                jwt.sign(payload, keys.secretOrKey, { expiresIn: 3600 }, (err, token) => {
+                jwt.sign(payload, keys.secretOrKeys, { expiresIn: 3600 }, (err, token) => {
                     res.json({
                         success: true,
                         token: "Bearer " + token
