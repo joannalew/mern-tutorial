@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const express = require('express');
+const path = require('path');
 const app = express();
 
 const db = require('./config/keys').mongoURI;
@@ -24,3 +25,10 @@ app.use(passport.initialize());
 require('./config/passport')(passport);
 app.use("/api/users", users);
 app.use("/api/tweets", tweets);
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static('frontend/build'));
+  app.get('/', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
+  })
+}
